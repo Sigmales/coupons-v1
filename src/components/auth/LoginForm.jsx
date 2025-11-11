@@ -20,10 +20,12 @@ export default function LoginForm() {
         setLoading(false)
       } else if (data?.user) {
         toast.success('Connexion réussie')
-        // Attendre que l'AuthContext se mette à jour via onAuthStateChange
         setTimeout(() => {
           navigate('/dashboard', { replace: true })
         }, 300)
+        setLoading(false)
+      } else {
+        setLoading(false)
       }
     } catch (err) {
       toast.error('Erreur de connexion')
