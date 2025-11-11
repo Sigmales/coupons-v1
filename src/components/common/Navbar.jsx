@@ -33,7 +33,10 @@ export default function Navbar() {
         </nav>
         <div className="flex items-center gap-2">
           {loading ? (
-            <div className="px-4 py-2 text-gray-500">Chargement...</div>
+            <>
+              <NavLink to="/login" className="px-4 py-2 rounded-lg text-primary-700 hover:bg-primary-50">Se connecter</NavLink>
+              <NavLink to="/register" className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700">S'inscrire</NavLink>
+            </>
           ) : user ? (
             <>
               <NavLink to="/profile" className="px-4 py-2 rounded-lg text-primary-700 hover:bg-primary-50">Profil</NavLink>
