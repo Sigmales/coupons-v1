@@ -80,11 +80,19 @@ export default function Profile() {
             <input
               id="profile-subscription"
               type="text"
-              value={profile?.subscription_type === 'vip' ? 'VIP' : profile?.subscription_type === 'standard' ? 'Standard' : 'Gratuit'}
+              value={
+                profile?.is_admin ? 'Admin (Accès VIP)' :
+                profile?.subscription_type === 'vip' ? 'VIP' : 
+                profile?.subscription_type === 'standard' ? 'Standard' : 
+                'Gratuit'
+              }
               disabled
               className="w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-500"
               aria-label="Type d'abonnement"
             />
+            {profile?.is_admin && (
+              <p className="text-xs text-red-600 mt-1">Vous avez accès à tous les pronostics en tant qu'administrateur</p>
+            )}
           </div>
 
           <div>

@@ -21,9 +21,11 @@ export default function PaymentVerification() {
   useEffect(() => { load() }, [])
 
   const approve = async (req) => {
+    const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('payment_requests').update({
       status: 'approved',
-      validated_at: new Date().toISOString()
+      validated_at: new Date().toISOString(),
+      admin_id: user?.id
     }).eq('id', req.id)
     if (error) return toast.error('Erreur validation')
     // Update profile subscription
