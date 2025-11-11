@@ -1,22 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
 export default function LoginForm() {
-  const { signIn } = useAuth()
+  const { signIn, user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Rediriger si l'utilisateur est déjà connecté
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, authLoading, navigate])
+
   const onSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    const { error } = await signIn(email, password)
+    const { error, data } = await signIn(email, password)
     setLoading(false)
     if (error) {
       toast.error('Identifiants invalides')
-    } else {
+    } else if (data?.user) {
       toast.success('Connexion réussie')
+      // Redirection gérée par l'useEffect ci-dessus
+      navigate('/dashboard', { replace: true })
     }
   }
 
