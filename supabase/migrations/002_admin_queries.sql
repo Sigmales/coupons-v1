@@ -3,16 +3,18 @@
 -- ============================================
 
 -- 1. Vérifier si un utilisateur spécifique est admin
--- Remplacez 'USER_ID_HERE' par l'UUID de l'utilisateur
+-- IMPORTANT: Remplacez '00000000-0000-0000-0000-000000000000' par un vrai UUID
+-- Pour obtenir l'UUID d'un utilisateur, utilisez d'abord la requête #7 avec l'email
 SELECT 
-  id,
-  full_name,
-  email,
-  is_admin,
-  created_at
-FROM profiles
-WHERE id = 'USER_ID_HERE'::uuid
-AND is_admin = true;
+  p.id,
+  p.full_name,
+  u.email,
+  p.is_admin,
+  p.created_at
+FROM profiles p
+JOIN auth.users u ON p.id = u.id
+WHERE p.id = '00000000-0000-0000-0000-000000000000'::uuid
+AND p.is_admin = true;
 
 -- 2. Vérifier si l'utilisateur actuellement connecté est admin
 -- (Utilisé dans les politiques RLS)
@@ -42,41 +44,53 @@ FROM profiles
 WHERE is_admin = true;
 
 -- 5. Promouvoir un utilisateur en admin
--- Remplacez 'USER_ID_HERE' par l'UUID de l'utilisateur
+-- IMPORTANT: Remplacez '00000000-0000-0000-0000-000000000000' par un vrai UUID
+-- Exemple d'UUID valide: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 UPDATE profiles
 SET 
   is_admin = true,
   updated_at = NOW()
-WHERE id = 'USER_ID_HERE'::uuid
+WHERE id = '00000000-0000-0000-0000-000000000000'::uuid
 RETURNING id, full_name, is_admin;
 
 -- 6. Rétrograder un admin en utilisateur normal
--- Remplacez 'USER_ID_HERE' par l'UUID de l'admin
+-- IMPORTANT: Remplacez '00000000-0000-0000-0000-000000000000' par un vrai UUID
 UPDATE profiles
 SET 
   is_admin = false,
   updated_at = NOW()
-WHERE id = 'USER_ID_HERE'::uuid
+WHERE id = '00000000-0000-0000-0000-000000000000'::uuid
 RETURNING id, full_name, is_admin;
 
--- 7. Vérifier si un utilisateur est admin par son email
+-- 7. Vérifier si un utilisateur est admin par son email (RECOMMANDÉ - Plus facile à utiliser)
+-- Remplacez 'email@example.com' par l'email réel de l'utilisateur
 SELECT 
   p.id,
   p.full_name,
   u.email,
-  p.is_admin
+  p.is_admin,
+  p.created_at
 FROM profiles p
 JOIN auth.users u ON p.id = u.id
 WHERE u.email = 'email@example.com'
 AND p.is_admin = true;
 
--- 8. Créer un admin directement (si vous avez déjà un utilisateur)
--- Remplacez 'USER_ID_HERE' par l'UUID de l'utilisateur
+-- Cette requête vous donne aussi l'UUID que vous pouvez utiliser dans les autres requêtes
+
+-- 8. Créer un admin directement par email (MÉTHODE LA PLUS SIMPLE)
+-- Remplacez 'email@example.com' par l'email de l'utilisateur à promouvoir
 UPDATE profiles
 SET 
   is_admin = true,
   updated_at = NOW()
-WHERE id = 'USER_ID_HERE'::uuid;
+WHERE id IN (
+  SELECT id FROM auth.users WHERE email = 'email@example.com'
+)
+RETURNING id, full_name, is_admin;
+
+-- Alternative: Par UUID (si vous avez déjà l'UUID)
+-- UPDATE profiles SET is_admin = true, updated_at = NOW() 
+-- WHERE id = '00000000-0000-0000-0000-000000000000'::uuid;
 
 -- 9. Vérifier les permissions admin dans une fonction
 -- Exemple de fonction pour vérifier si un utilisateur est admin
@@ -93,8 +107,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Utilisation de la fonction:
--- SELECT is_user_admin('USER_ID_HERE'::uuid);
--- SELECT is_user_admin(auth.uid());
+-- SELECT is_user_admin('00000000-0000-0000-0000-000000000000'::uuid);
+-- SELECT is_user_admin(auth.uid()); -- Pour l'utilisateur actuellement connecté
 
 -- 10. Vérifier les admins avec leurs statistiques
 SELECT 
