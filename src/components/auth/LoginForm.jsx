@@ -1,33 +1,33 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
 export default function LoginForm() {
-  const { signIn, user, loading: authLoading } = useAuth()
+  const { signIn } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Rediriger si l'utilisateur est déjà connecté
-  useEffect(() => {
-    if (!authLoading && user) {
-      navigate('/dashboard', { replace: true })
-    }
-  }, [user, authLoading, navigate])
-
   const onSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    const { error, data } = await signIn(email, password)
-    setLoading(false)
-    if (error) {
-      toast.error('Identifiants invalides')
-    } else if (data?.user) {
-      toast.success('Connexion réussie')
-      // Redirection gérée par l'useEffect ci-dessus
-      navigate('/dashboard', { replace: true })
+    try {
+      const { error, data } = await signIn(email, password)
+      if (error) {
+        toast.error(error.message || 'Identifiants invalides')
+        setLoading(false)
+      } else if (data?.user) {
+        toast.success('Connexion réussie')
+        // Attendre que l'AuthContext se mette à jour via onAuthStateChange
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true })
+        }, 300)
+      }
+    } catch (err) {
+      toast.error('Erreur de connexion')
+      setLoading(false)
     }
   }
 
