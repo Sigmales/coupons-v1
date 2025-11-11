@@ -12,25 +12,33 @@ export default function LoginForm() {
 
   const onSubmit = async (e) => {
     e.preventDefault()
+    if (loading) return
+    
     setLoading(true)
     try {
-      const { error, data } = await signIn(email, password)
-      if (error) {
-        toast.error(error.message || 'Identifiants invalides')
+      const result = await signIn(email, password)
+      
+      if (result.error) {
+        console.error('Login error:', result.error)
+        toast.error(result.error.message || 'Identifiants invalides')
         setLoading(false)
-      } else if (data?.user) {
+        return
+      }
+      
+      if (result.data?.user) {
         toast.success('Connexion réussie')
         // Attendre un peu pour que le profil soit chargé par AuthContext
         setTimeout(() => {
           navigate('/dashboard', { replace: true })
         }, 500)
       } else {
-        toast.error('Erreur lors de la connexion')
+        console.error('No user data in response:', result)
+        toast.error('Erreur lors de la connexion. Veuillez réessayer.')
         setLoading(false)
       }
     } catch (err) {
-      console.error('Login error:', err)
-      toast.error('Erreur de connexion')
+      console.error('Login exception:', err)
+      toast.error('Erreur de connexion. Veuillez vérifier votre connexion internet.')
       setLoading(false)
     }
   }
