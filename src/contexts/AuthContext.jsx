@@ -37,12 +37,26 @@ export default function AuthProvider({ children }) {
         // Le profil devrait être créé automatiquement par le trigger
         // Si ce n'est pas le cas, attendre un peu et réessayer
         if (error.code === 'PGRST116') {
-          setTimeout(async () => {
-            const { data: retryData } = await supabase.from('profiles').select('*').eq('id', userId).single()
-            if (retryData) {
-              setProfile(retryData)
+          // Attendre que le trigger crée le profil
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          const { data: retryData, error: retryError } = await supabase.from('profiles').select('*').eq('id', userId).single()
+          if (retryData) {
+            setProfile(retryData)
+          } else if (retryError && retryError.code === 'PGRST116') {
+            // Si le profil n'existe toujours pas, essayer de le créer
+            const { data: userData } = await supabase.auth.getUser()
+            if (userData?.user) {
+              const fullName = userData.user.user_metadata?.full_name || 'Utilisateur'
+              const { data: newProfile, error: insertError } = await supabase
+                .from('profiles')
+                .insert({ id: userId, full_name: fullName, subscription_type: 'free' })
+                .select()
+                .single()
+              if (!insertError && newProfile) {
+                setProfile(newProfile)
+              }
             }
-          }, 1000)
+          }
         }
       } else {
         setProfile(data)

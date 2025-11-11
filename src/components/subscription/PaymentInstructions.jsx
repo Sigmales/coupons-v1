@@ -141,8 +141,16 @@ export default function PaymentInstructions({ plan, duration, amount, onSuccess 
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">2. Votre numéro de téléphone (optionnel)</label>
-          <input type="tel" value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} placeholder="Ex: 70 12 34 56" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+          <label htmlFor="payment-phone" className="block text-sm font-semibold text-gray-700 mb-2">2. Votre numéro de téléphone (optionnel)</label>
+          <input 
+            id="payment-phone"
+            type="tel" 
+            value={senderNumber} 
+            onChange={(e) => setSenderNumber(e.target.value)} 
+            placeholder="Ex: 70 12 34 56" 
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            aria-label="Numéro de téléphone"
+          />
           <p className="text-xs text-gray-500 mt-1">Pour faciliter la vérification de votre paiement</p>
         </div>
         <div>

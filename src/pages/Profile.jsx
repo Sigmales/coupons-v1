@@ -44,52 +44,60 @@ export default function Profile() {
         
         <form onSubmit={handleUpdate} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700 mb-2">
               Email
             </label>
             <input
+              id="profile-email"
               type="email"
               value={user?.email || ''}
               disabled
               className="w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-500"
+              aria-label="Adresse email"
             />
             <p className="text-xs text-gray-500 mt-1">L'email ne peut pas être modifié</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="profile-fullname" className="block text-sm font-medium text-gray-700 mb-2">
               Nom complet
             </label>
             <input
+              id="profile-fullname"
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="Votre nom complet"
+              aria-label="Nom complet"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="profile-subscription" className="block text-sm font-medium text-gray-700 mb-2">
               Type d'abonnement
             </label>
             <input
+              id="profile-subscription"
               type="text"
               value={profile?.subscription_type === 'vip' ? 'VIP' : profile?.subscription_type === 'standard' ? 'Standard' : 'Gratuit'}
               disabled
               className="w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-500"
+              aria-label="Type d'abonnement"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="profile-status" className="block text-sm font-medium text-gray-700 mb-2">
               Statut de l'abonnement
             </label>
             <input
+              id="profile-status"
               type="text"
               value={profile?.subscription_end && new Date(profile.subscription_end) >= new Date() ? 'Actif' : 'Expiré/Gratuit'}
               disabled
               className="w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-500"
+              aria-label="Statut de l'abonnement"
             />
             {profile?.subscription_end && (
               <p className="text-xs text-gray-500 mt-1">
