@@ -1,0 +1,14 @@
+{
+  "name": "Coupons - Pronostics Sportifs VIP",
+  "short_name": "Coupons",
+  "theme_color": "#9333ea",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-72x72.png", "sizes": "72x72", "type": "image/png" }
+  ]
+}
+
