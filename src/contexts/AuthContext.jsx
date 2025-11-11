@@ -30,8 +30,26 @@ export default function AuthProvider({ children }) {
   }, [])
 
   const loadProfile = async (userId) => {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    if (!error) setProfile(data)
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      if (error) {
+        console.error('Error loading profile:', error)
+        // Le profil devrait être créé automatiquement par le trigger
+        // Si ce n'est pas le cas, attendre un peu et réessayer
+        if (error.code === 'PGRST116') {
+          setTimeout(async () => {
+            const { data: retryData } = await supabase.from('profiles').select('*').eq('id', userId).single()
+            if (retryData) {
+              setProfile(retryData)
+            }
+          }, 1000)
+        }
+      } else {
+        setProfile(data)
+      }
+    } catch (err) {
+      console.error('Error in loadProfile:', err)
+    }
   }
 
   const value = useMemo(() => ({
