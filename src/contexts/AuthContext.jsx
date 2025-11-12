@@ -28,19 +28,28 @@ export default function AuthProvider({ children }) {
       if (error) {
         console.error('Error loading profile:', error)
         
-        // Si le profil n'existe pas (PGRST116 = no rows returned)
-        if (error.code === 'PGRST116') {
+        // Vérifier si le profil n'existe pas (plusieurs codes possibles selon la version de Supabase)
+        const isProfileNotFound = error.code === 'PGRST116' || 
+                                  error.code === '42P01' || 
+                                  error.message?.includes('No rows') ||
+                                  error.message?.includes('not found')
+        
+        if (isProfileNotFound) {
           // Attendre un peu pour que le trigger crée le profil
           if (retryCount < 3) {
+            console.log(`Profile not found, retrying... (${retryCount + 1}/3)`)
             await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
             return loadProfile(userId, retryCount + 1)
           }
           
-          // Si après 3 tentatives le profil n'existe toujours pas, le créer
+          // Si après 3 tentatives le profil n'existe toujours pas, le créer manuellement
+          console.log('Profile still not found after retries, creating manually...')
           try {
             const { data: userData } = await supabase.auth.getUser()
             if (userData?.user) {
-              const fullName = userData.user.user_metadata?.full_name || 'Utilisateur'
+              const fullName = userData.user.user_metadata?.full_name || 
+                              userData.user.email?.split('@')[0] || 
+                              'Utilisateur'
               const { data: newProfile, error: insertError } = await supabase
                 .from('profiles')
                 .insert({ 
@@ -53,17 +62,22 @@ export default function AuthProvider({ children }) {
                 .single()
               
               if (!insertError && newProfile) {
+                console.log('Profile created successfully:', newProfile)
                 setProfile(newProfile)
                 setProfileLoading(false)
                 return
+              } else {
+                console.error('Error creating profile:', insertError)
               }
             }
           } catch (createErr) {
-            console.error('Error creating profile:', createErr)
+            console.error('Exception creating profile:', createErr)
           }
         }
         
         // Pour les autres erreurs, on continue sans profil
+        // Mais on ne bloque pas l'utilisateur - le profil peut être créé plus tard
+        console.warn('Profile could not be loaded, but continuing anyway')
         setProfile(null)
       } else {
         setProfile(data)

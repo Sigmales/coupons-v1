@@ -16,12 +16,19 @@ export default function LoginForm() {
     if (waitingForProfile && user && !profileLoading) {
       if (profile) {
         toast.success('Connexion réussie')
-        navigate('/dashboard', { replace: true })
+        // Rediriger selon le rôle : admin vers /admin, sinon /dashboard
+        if (profile.is_admin) {
+          navigate('/admin', { replace: true })
+        } else {
+          navigate('/dashboard', { replace: true })
+        }
         setWaitingForProfile(false)
       } else {
         // Profil non chargé mais utilisateur connecté - attendre un peu plus
         const timeout = setTimeout(() => {
           if (user) {
+            // Si pas de profil après timeout, rediriger vers dashboard quand même
+            // Le profil sera créé automatiquement
             navigate('/dashboard', { replace: true })
             setWaitingForProfile(false)
           }
@@ -37,13 +44,19 @@ export default function LoginForm() {
       const timeoutId = setTimeout(() => {
         if (waitingForProfile && user) {
           console.warn('Profile loading timeout, redirecting anyway')
-          navigate('/dashboard', { replace: true })
+          // Vérifier si on a le profil maintenant (peut-être chargé entre temps)
+          // Sinon rediriger vers dashboard (le profil sera créé automatiquement)
+          if (profile?.is_admin) {
+            navigate('/admin', { replace: true })
+          } else {
+            navigate('/dashboard', { replace: true })
+          }
           setWaitingForProfile(false)
         }
       }, 5000)
       return () => clearTimeout(timeoutId)
     }
-  }, [waitingForProfile, user, navigate])
+  }, [waitingForProfile, user, profile, navigate])
 
   const onSubmit = async (e) => {
     e.preventDefault()

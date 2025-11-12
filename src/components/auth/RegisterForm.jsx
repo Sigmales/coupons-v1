@@ -1,23 +1,60 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
 export default function RegisterForm() {
-  const { signUp } = useAuth()
+  const { signUp, user, profile, profileLoading } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [waitingForProfile, setWaitingForProfile] = useState(false)
+
+  // Rediriger après inscription si l'email confirmation n'est pas requise
+  useEffect(() => {
+    if (waitingForProfile && user && !profileLoading) {
+      if (profile) {
+        toast.success('Inscription réussie !')
+        // Rediriger selon le rôle : admin vers /admin, sinon /dashboard
+        if (profile.is_admin) {
+          navigate('/admin', { replace: true })
+        } else {
+          navigate('/dashboard', { replace: true })
+        }
+        setWaitingForProfile(false)
+      } else if (user) {
+        // Si pas de profil mais utilisateur connecté, rediriger vers dashboard
+        // Le profil sera créé automatiquement
+        const timeout = setTimeout(() => {
+          navigate('/dashboard', { replace: true })
+          setWaitingForProfile(false)
+        }, 2000)
+        return () => clearTimeout(timeout)
+      }
+    }
+  }, [waitingForProfile, user, profile, profileLoading, navigate])
 
   const onSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    const { error } = await signUp(email, password, fullName)
+    const { error, data } = await signUp(email, password, fullName)
     setLoading(false)
+    
     if (error) {
-      toast.error('Inscription échouée')
+      toast.error(error.message || 'Inscription échouée')
+      return
+    }
+    
+    // Si l'email confirmation n'est pas requise, l'utilisateur est connecté automatiquement
+    if (data?.session) {
+      toast.success('Compte créé avec succès !')
+      // Attendre que le profil soit chargé
+      setWaitingForProfile(true)
     } else {
-      toast.success('Compte créé. Vérifiez votre email si requis.')
+      // Email confirmation requise
+      toast.success('Compte créé. Veuillez vérifier votre email pour confirmer votre compte.')
     }
   }
 
