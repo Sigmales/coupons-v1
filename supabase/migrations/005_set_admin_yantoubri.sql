@@ -6,10 +6,12 @@
 -- ============================================
 
 -- Mettre à jour le profil pour rendre l'utilisateur admin
-UPDATE profiles
-SET is_admin = true,
-    full_name = COALESCE(full_name, 'Administrateur'),
-    updated_at = NOW()
+-- Cette requête fonctionne même si le profil n'existe pas encore (sera créé par le trigger)
+UPDATE public.profiles
+SET 
+  is_admin = true,
+  full_name = COALESCE(full_name, 'Administrateur'),
+  updated_at = NOW()
 WHERE id = (
   SELECT id 
   FROM auth.users 
@@ -17,20 +19,47 @@ WHERE id = (
   LIMIT 1
 );
 
--- Vérifier que la mise à jour a fonctionné
+-- Si le profil n'existe pas encore, le créer manuellement
+-- (normalement le trigger le crée automatiquement, mais au cas où)
+INSERT INTO public.profiles (id, full_name, subscription_type, is_admin, created_at, updated_at)
+SELECT 
+  u.id,
+  COALESCE(u.raw_user_meta_data->>'full_name', 'Administrateur'),
+  'free',
+  true,
+  NOW(),
+  NOW()
+FROM auth.users u
+WHERE u.email = 'yantoubri@gmail.com'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.profiles p WHERE p.id = u.id
+  )
+ON CONFLICT (id) DO UPDATE
+SET 
+  is_admin = true,
+  full_name = COALESCE(EXCLUDED.full_name, profiles.full_name, 'Administrateur'),
+  updated_at = NOW();
+
+-- Vérification : afficher le résultat
 DO $$
 DECLARE
   admin_count INTEGER;
+  admin_email TEXT;
+  admin_name TEXT;
 BEGIN
-  SELECT COUNT(*) INTO admin_count
-  FROM profiles p
-  JOIN auth.users u ON p.id = u.id
+  SELECT COUNT(*), MAX(u.email), MAX(p.full_name)
+  INTO admin_count, admin_email, admin_name
+  FROM auth.users u
+  JOIN public.profiles p ON u.id = p.id
   WHERE u.email = 'yantoubri@gmail.com' AND p.is_admin = true;
   
   IF admin_count > 0 THEN
-    RAISE NOTICE 'Admin créé avec succès pour yantoubri@gmail.com';
+    RAISE NOTICE '✅ Admin créé avec succès !';
+    RAISE NOTICE '   Email: %', admin_email;
+    RAISE NOTICE '   Nom: %', admin_name;
   ELSE
-    RAISE WARNING 'Aucun utilisateur trouvé avec l''email yantoubri@gmail.com. Créez d''abord l''utilisateur via Supabase Auth.';
+    RAISE WARNING '⚠️  Aucun utilisateur trouvé avec l''email yantoubri@gmail.com';
+    RAISE NOTICE '   Veuillez d''abord créer l''utilisateur via Supabase Auth Dashboard';
+    RAISE NOTICE '   Puis réexécutez ce script.';
   END IF;
 END $$;
-

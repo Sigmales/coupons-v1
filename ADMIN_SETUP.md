@@ -16,9 +16,11 @@ Pour créer l'administrateur avec l'email `yantoubri@gmail.com`, suivez ces éta
 
 2. **Rendre l'utilisateur admin :**
    - Exécutez la migration SQL `005_set_admin_yantoubri.sql` dans l'éditeur SQL de Supabase
+   - Cette migration créera automatiquement le profil si nécessaire
    - Ou exécutez cette requête directement :
    ```sql
-   UPDATE profiles
+   -- Mettre à jour le profil existant
+   UPDATE public.profiles
    SET is_admin = true,
        full_name = COALESCE(full_name, 'Administrateur'),
        updated_at = NOW()
@@ -28,6 +30,21 @@ Pour créer l'administrateur avec l'email `yantoubri@gmail.com`, suivez ces éta
      WHERE email = 'yantoubri@gmail.com'
      LIMIT 1
    );
+   
+   -- Créer le profil si il n'existe pas encore
+   INSERT INTO public.profiles (id, full_name, subscription_type, is_admin)
+   SELECT 
+     u.id,
+     COALESCE(u.raw_user_meta_data->>'full_name', 'Administrateur'),
+     'free',
+     true
+   FROM auth.users u
+   WHERE u.email = 'yantoubri@gmail.com'
+     AND NOT EXISTS (
+       SELECT 1 FROM public.profiles p WHERE p.id = u.id
+     )
+   ON CONFLICT (id) DO UPDATE
+   SET is_admin = true, updated_at = NOW();
    ```
 
 ### Option 2 : Via l'interface d'inscription
@@ -50,11 +67,14 @@ SELECT
   u.email,
   p.full_name,
   p.is_admin,
+  p.subscription_type,
   p.created_at
 FROM auth.users u
-JOIN profiles p ON u.id = p.id
+LEFT JOIN public.profiles p ON u.id = p.id
 WHERE u.email = 'yantoubri@gmail.com';
 ```
+
+Ou utilisez le script de vérification `006_verify_admin_setup.sql` :
 
 Vous devriez voir `is_admin = true`.
 
@@ -70,5 +90,11 @@ Après connexion, vous serez automatiquement redirigé vers `/admin`.
 
 - L'utilisateur doit exister dans `auth.users` avant de pouvoir être rendu admin
 - Le profil est créé automatiquement par le trigger lors de l'inscription
-- Si le profil n'existe pas, il sera créé automatiquement lors de la première connexion
+- Si le profil n'existe pas, la migration `005_set_admin_yantoubri.sql` le créera automatiquement
+- Le schéma utilisé est `public.profiles` (conforme au schéma Supabase actuel)
+
+## Scripts disponibles
+
+1. **005_set_admin_yantoubri.sql** : Crée ou met à jour l'admin yantoubri@gmail.com
+2. **006_verify_admin_setup.sql** : Vérifie la configuration admin et affiche les informations
 
