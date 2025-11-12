@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import useAuth from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function AdminRoute() {
   const { user, profile, loading } = useAuth()
@@ -41,3 +41,4 @@ export default function AdminRoute() {
   // Utilisateur admin, autoriser l'accès
   return <Outlet />
 }
+

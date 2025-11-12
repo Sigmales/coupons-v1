@@ -1,14 +1,14 @@
-import { createContext, useEffect, useMemo, useState, useCallback } from 'react'
-import { supabase } from '../services/supabase'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { supabase } from '../lib/supabase'
 
-export const AuthContext = createContext(null)
+const AuthContext = createContext(null)
 
-export default function AuthProvider({ children }) {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Fonction simple pour charger le profil
+  // Fonction pour charger le profil utilisateur depuis la table profiles
   const loadProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null)
@@ -46,8 +46,11 @@ export default function AuthProvider({ children }) {
             .single()
 
           if (!insertError && newProfile) {
+            console.log('✅ Profile created:', newProfile)
             setProfile(newProfile)
             return
+          } else {
+            console.error('Error creating profile:', insertError)
           }
         }
         
@@ -56,6 +59,7 @@ export default function AuthProvider({ children }) {
         return
       }
 
+      console.log('✅ Profile loaded:', data)
       setProfile(data)
     } catch (err) {
       console.error('Error in loadProfile:', err)
@@ -63,7 +67,7 @@ export default function AuthProvider({ children }) {
     }
   }, [])
 
-  // Initialisation
+  // Initialisation : vérifier la session au chargement
   useEffect(() => {
     let mounted = true
 
@@ -128,7 +132,33 @@ export default function AuthProvider({ children }) {
     }
   }, [loadProfile])
 
-  // Fonctions d'authentification
+  // Fonction d'inscription
+  const signUp = useCallback(async (email, password, fullName) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            full_name: fullName || 'Utilisateur'
+          }
+        }
+      })
+      
+      if (error) {
+        console.error('Sign up error:', error)
+        return { error, data: null }
+      }
+
+      console.log('✅ Sign up successful:', data)
+      return { error: null, data }
+    } catch (err) {
+      console.error('Sign up exception:', err)
+      return { error: err, data: null }
+    }
+  }, [])
+
+  // Fonction de connexion
   const signIn = useCallback(async (email, password) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ 
@@ -137,39 +167,20 @@ export default function AuthProvider({ children }) {
       })
       
       if (error) {
+        console.error('Sign in error:', error)
         return { error, data: null }
       }
 
+      console.log('✅ Sign in successful:', data)
+      // Le profil sera chargé automatiquement par onAuthStateChange
       return { error: null, data }
     } catch (err) {
-      console.error('Sign in error:', err)
+      console.error('Sign in exception:', err)
       return { error: err, data: null }
     }
   }, [])
 
-  const signUp = useCallback(async (email, password, full_name) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-          data: {
-            full_name: full_name || 'Utilisateur'
-          }
-        }
-      })
-      
-      if (error) {
-        return { error, data: null }
-      }
-
-      return { error: null, data }
-    } catch (err) {
-      console.error('Sign up error:', err)
-      return { error: err, data: null }
-    }
-  }, [])
-
+  // Fonction de déconnexion
   const signOut = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signOut()
@@ -177,27 +188,29 @@ export default function AuthProvider({ children }) {
         console.error('Sign out error:', error)
         throw error
       }
+      console.log('✅ Sign out successful')
     } catch (err) {
       console.error('Sign out exception:', err)
       throw err
     }
   }, [])
 
+  // Fonction pour recharger le profil
   const reloadProfile = useCallback(async () => {
     if (user?.id) {
       await loadProfile(user.id)
     }
   }, [user, loadProfile])
 
-  const value = useMemo(() => ({
+  const value = {
     user,
     profile,
     loading,
-    signIn,
     signUp,
+    signIn,
     signOut,
     reloadProfile
-  }), [user, profile, loading, signIn, signUp, signOut, reloadProfile])
+  }
 
   return (
     <AuthContext.Provider value={value}>
@@ -205,3 +218,12 @@ export default function AuthProvider({ children }) {
     </AuthContext.Provider>
   )
 }
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider')
+  }
+  return context
+}
+
