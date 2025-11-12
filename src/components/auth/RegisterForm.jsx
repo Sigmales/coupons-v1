@@ -4,57 +4,58 @@ import useAuth from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
 export default function RegisterForm() {
-  const { signUp, user, profile, profileLoading } = useAuth()
+  const { signUp, user, profile } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [waitingForProfile, setWaitingForProfile] = useState(false)
 
-  // Rediriger après inscription si l'email confirmation n'est pas requise
+  // Rediriger après inscription réussie (si email confirmation non requise)
   useEffect(() => {
-    if (waitingForProfile && user && !profileLoading) {
-      if (profile) {
-        toast.success('Inscription réussie !')
-        // Rediriger selon le rôle : admin vers /admin, sinon /dashboard
-        if (profile.is_admin) {
-          navigate('/admin', { replace: true })
-        } else {
-          navigate('/dashboard', { replace: true })
-        }
-        setWaitingForProfile(false)
-      } else if (user) {
-        // Si pas de profil mais utilisateur connecté, rediriger vers dashboard
-        // Le profil sera créé automatiquement
-        const timeout = setTimeout(() => {
-          navigate('/dashboard', { replace: true })
-          setWaitingForProfile(false)
-        }, 2000)
-        return () => clearTimeout(timeout)
+    if (user && profile) {
+      // Rediriger selon le rôle
+      if (profile.is_admin) {
+        navigate('/admin', { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
       }
+    } else if (user && !profile) {
+      // Attendre un peu que le profil se charge
+      const timeout = setTimeout(() => {
+        navigate('/dashboard', { replace: true })
+      }, 1000)
+      return () => clearTimeout(timeout)
     }
-  }, [waitingForProfile, user, profile, profileLoading, navigate])
+  }, [user, profile, navigate])
 
   const onSubmit = async (e) => {
     e.preventDefault()
+    if (loading) return
+    
     setLoading(true)
-    const { error, data } = await signUp(email, password, fullName)
-    setLoading(false)
-    
-    if (error) {
-      toast.error(error.message || 'Inscription échouée')
-      return
-    }
-    
-    // Si l'email confirmation n'est pas requise, l'utilisateur est connecté automatiquement
-    if (data?.session) {
-      toast.success('Compte créé avec succès !')
-      // Attendre que le profil soit chargé
-      setWaitingForProfile(true)
-    } else {
-      // Email confirmation requise
-      toast.success('Compte créé. Veuillez vérifier votre email pour confirmer votre compte.')
+    try {
+      const { error, data } = await signUp(email, password, fullName)
+      
+      if (error) {
+        toast.error(error.message || 'Inscription échouée')
+        setLoading(false)
+        return
+      }
+      
+      // Si l'email confirmation n'est pas requise, l'utilisateur est connecté automatiquement
+      if (data?.session) {
+        toast.success('Compte créé avec succès !')
+        // La redirection sera gérée par le useEffect
+      } else {
+        // Email confirmation requise
+        toast.success('Compte créé. Veuillez vérifier votre email pour confirmer votre compte.')
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('Register exception:', err)
+      toast.error('Erreur lors de l\'inscription. Veuillez réessayer.')
+      setLoading(false)
     }
   }
 
@@ -107,4 +108,3 @@ export default function RegisterForm() {
     </form>
   )
 }
-

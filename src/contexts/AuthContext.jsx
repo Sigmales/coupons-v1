@@ -7,17 +7,14 @@ export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [profileLoading, setProfileLoading] = useState(false)
 
-  // Fonction pour charger le profil avec retry
-  const loadProfile = useCallback(async (userId, retryCount = 0) => {
+  // Fonction simple pour charger le profil
+  const loadProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null)
-      setProfileLoading(false)
       return
     }
 
-    setProfileLoading(true)
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -26,71 +23,47 @@ export default function AuthProvider({ children }) {
         .single()
 
       if (error) {
-        console.error('Error loading profile:', error)
-        
-        // Vérifier si le profil n'existe pas (plusieurs codes possibles selon la version de Supabase)
-        const isProfileNotFound = error.code === 'PGRST116' || 
-                                  error.code === '42P01' || 
-                                  error.message?.includes('No rows') ||
-                                  error.message?.includes('not found')
-        
-        if (isProfileNotFound) {
-          // Attendre un peu pour que le trigger crée le profil
-          if (retryCount < 3) {
-            console.log(`Profile not found, retrying... (${retryCount + 1}/3)`)
-            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
-            return loadProfile(userId, retryCount + 1)
-          }
+        // Si le profil n'existe pas, le créer
+        if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+          console.log('Profile not found, creating...')
           
-          // Si après 3 tentatives le profil n'existe toujours pas, le créer manuellement
-          console.log('Profile still not found after retries, creating manually...')
-          try {
-            const { data: userData } = await supabase.auth.getUser()
-            if (userData?.user) {
-              const fullName = userData.user.user_metadata?.full_name || 
-                              userData.user.email?.split('@')[0] || 
-                              'Utilisateur'
-              const { data: newProfile, error: insertError } = await supabase
-                .from('profiles')
-                .insert({ 
-                  id: userId, 
-                  full_name: fullName, 
-                  subscription_type: 'free',
-                  is_admin: false
-                })
-                .select()
-                .single()
-              
-              if (!insertError && newProfile) {
-                console.log('Profile created successfully:', newProfile)
-                setProfile(newProfile)
-                setProfileLoading(false)
-                return
-              } else {
-                console.error('Error creating profile:', insertError)
-              }
-            }
-          } catch (createErr) {
-            console.error('Exception creating profile:', createErr)
+          // Récupérer les métadonnées utilisateur
+          const { data: userData } = await supabase.auth.getUser()
+          const fullName = userData?.user?.user_metadata?.full_name || 
+                          userData?.user?.email?.split('@')[0] || 
+                          'Utilisateur'
+
+          // Créer le profil
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({ 
+              id: userId, 
+              full_name: fullName, 
+              subscription_type: 'free',
+              is_admin: false
+            })
+            .select()
+            .single()
+
+          if (!insertError && newProfile) {
+            setProfile(newProfile)
+            return
           }
         }
         
-        // Pour les autres erreurs, on continue sans profil
-        // Mais on ne bloque pas l'utilisateur - le profil peut être créé plus tard
-        console.warn('Profile could not be loaded, but continuing anyway')
+        console.error('Error loading profile:', error)
         setProfile(null)
-      } else {
-        setProfile(data)
+        return
       }
+
+      setProfile(data)
     } catch (err) {
       console.error('Error in loadProfile:', err)
       setProfile(null)
-    } finally {
-      setProfileLoading(false)
     }
   }, [])
 
-  // Initialisation et écoute des changements d'authentification
+  // Initialisation
   useEffect(() => {
     let mounted = true
 
@@ -102,6 +75,8 @@ export default function AuthProvider({ children }) {
         if (error) {
           console.error('Error getting session:', error)
           if (mounted) {
+            setUser(null)
+            setProfile(null)
             setLoading(false)
           }
           return
@@ -109,18 +84,20 @@ export default function AuthProvider({ children }) {
 
         if (mounted) {
           setUser(session?.user ?? null)
-          setLoading(false)
           
           if (session?.user) {
             await loadProfile(session.user.id)
           } else {
             setProfile(null)
-            setProfileLoading(false)
           }
+          
+          setLoading(false)
         }
       } catch (err) {
         console.error('Error in initAuth:', err)
         if (mounted) {
+          setUser(null)
+          setProfile(null)
           setLoading(false)
         }
       }
@@ -137,12 +114,9 @@ export default function AuthProvider({ children }) {
           setUser(session?.user ?? null)
           
           if (session?.user) {
-            // Nouvelle connexion ou rafraîchissement
             await loadProfile(session.user.id)
           } else {
-            // Déconnexion
             setProfile(null)
-            setProfileLoading(false)
           }
         }
       }
@@ -166,7 +140,6 @@ export default function AuthProvider({ children }) {
         return { error, data: null }
       }
 
-      // Le profil sera chargé automatiquement par onAuthStateChange
       return { error: null, data }
     } catch (err) {
       console.error('Sign in error:', err)
@@ -190,12 +163,6 @@ export default function AuthProvider({ children }) {
         return { error, data: null }
       }
 
-      // Si l'email confirmation n'est pas requise, le profil sera chargé automatiquement
-      if (data.user && !data.session) {
-        // Email confirmation requise
-        return { error: null, data }
-      }
-
       return { error: null, data }
     } catch (err) {
       console.error('Sign up error:', err)
@@ -210,7 +177,6 @@ export default function AuthProvider({ children }) {
         console.error('Sign out error:', error)
         throw error
       }
-      // Le state sera mis à jour par onAuthStateChange
     } catch (err) {
       console.error('Sign out exception:', err)
       throw err
@@ -226,13 +192,12 @@ export default function AuthProvider({ children }) {
   const value = useMemo(() => ({
     user,
     profile,
-    loading: loading || profileLoading,
-    profileLoading,
+    loading,
     signIn,
     signUp,
     signOut,
     reloadProfile
-  }), [user, profile, loading, profileLoading, signIn, signUp, signOut, reloadProfile])
+  }), [user, profile, loading, signIn, signUp, signOut, reloadProfile])
 
   return (
     <AuthContext.Provider value={value}>
@@ -240,4 +205,3 @@ export default function AuthProvider({ children }) {
     </AuthContext.Provider>
   )
 }
-
