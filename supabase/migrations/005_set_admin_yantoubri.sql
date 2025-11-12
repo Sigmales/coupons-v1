@@ -5,8 +5,7 @@
 -- Ensuite, exécutez ce script pour le rendre admin
 -- ============================================
 
--- Mettre à jour le profil pour rendre l'utilisateur admin
--- Cette requête fonctionne même si le profil n'existe pas encore (sera créé par le trigger)
+-- Étape 1: Mettre à jour le profil existant pour rendre l'utilisateur admin
 UPDATE public.profiles
 SET 
   is_admin = true,
@@ -19,7 +18,7 @@ WHERE id = (
   LIMIT 1
 );
 
--- Si le profil n'existe pas encore, le créer manuellement
+-- Étape 2: Si le profil n'existe pas encore, le créer manuellement
 -- (normalement le trigger le crée automatiquement, mais au cas où)
 INSERT INTO public.profiles (id, full_name, subscription_type, is_admin, created_at, updated_at)
 SELECT 
@@ -40,7 +39,7 @@ SET
   full_name = COALESCE(EXCLUDED.full_name, profiles.full_name, 'Administrateur'),
   updated_at = NOW();
 
--- Vérification : afficher le résultat
+-- Étape 3: Vérification - afficher le résultat
 DO $$
 DECLARE
   admin_count INTEGER;
