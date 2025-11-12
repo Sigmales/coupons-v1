@@ -1,13 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from './contexts/AuthContext'
 
-// Pages (à créer progressivement)
-import Home from './pages/Home'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
-import ProtectedRoute from './components/auth/ProtectedRoute'
-import AdminRoute from './components/auth/AdminRoute'
+// Pages
+import Home from './pages/Home.jsx'
+import Login from './pages/Login.jsx'
+import Register from './pages/Register.jsx'
+import Dashboard from './pages/Dashboard.jsx'
+import ProtectedRoute from './components/auth/ProtectedRoute.jsx'
+import AdminRoute from './components/auth/AdminRoute.jsx'
 
 export default function App() {
   return (
