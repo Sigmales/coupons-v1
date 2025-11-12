@@ -9,6 +9,8 @@ import ProtectedRoute from './components/auth/ProtectedRoute.jsx'
 import AdminRoute from './components/auth/AdminRoute.jsx'
 
 export default function App() {
+  console.log('✅ App component rendered')
+  
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-1">
@@ -25,7 +27,7 @@ export default function App() {
           
           {/* Routes admin */}
           <Route element={<AdminRoute />}>
-            <Route path="/admin" element={<div>Admin Dashboard (à créer)</div>} />
+            <Route path="/admin" element={<div className="p-10 text-white">Admin Dashboard (à créer)</div>} />
           </Route>
           
           {/* Route par défaut */}

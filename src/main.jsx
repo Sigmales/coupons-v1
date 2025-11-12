@@ -6,7 +6,15 @@ import { AuthProvider } from './contexts/AuthContext.jsx'
 import { Toaster } from 'react-hot-toast'
 import './styles/index.css'
 
-createRoot(document.getElementById('root')).render(
+// Debug: Vérifier que le root existe
+const rootElement = document.getElementById('root')
+if (!rootElement) {
+  throw new Error('Root element not found!')
+}
+
+console.log('🚀 Application starting...')
+
+createRoot(rootElement).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
